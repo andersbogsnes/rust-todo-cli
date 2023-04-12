@@ -1,7 +1,6 @@
 use std::fs;
 
 use anyhow::{anyhow, Result};
-// TODO: list items
 // TODO: delete items
 // TODO: mark complete
 use clap::{Parser, Subcommand};
@@ -9,8 +8,8 @@ use directories::ProjectDirs;
 
 use crate::repo::SQLRepo;
 
-mod repo;
 mod models;
+mod repo;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -21,10 +20,10 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum SubCommand {
-    Add {
-        text: String,
-    },
+    Add { text: String },
     Get { id: i64 },
+    List,
+    Delete { id: i64 },
 }
 
 fn init_db() -> Result<SQLRepo> {
@@ -33,12 +32,12 @@ fn init_db() -> Result<SQLRepo> {
         fs::create_dir_all(&data_dir)?;
         let db_path = data_dir.join("todo.db");
         let repo = SQLRepo::new(&format!("sqlite://{}", db_path.to_string_lossy()))?;
+
         Ok(repo)
     } else {
         Err(anyhow!("Error"))
     }
 }
-
 
 fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
@@ -50,12 +49,19 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         SubCommand::Get { id: item_id } => {
-            let item = repo.get(item_id)?;
-            if let Some(item) = item {
-                println!("Item: {:?}", item)
-            } else {
-                println!("No item found")
+            match repo.get(item_id)? {
+                Some(item) => println!("Item: {:?}", item),
+                None => println!("No item found"),
             }
+            Ok(())
+        }
+
+        SubCommand::List => {
+            repo.get_all().map(|item| println!("{:?}", item))?;
+            Ok(())
+        }
+        SubCommand::Delete { id } => {
+            repo.delete(id)?;
             Ok(())
         }
     }
