@@ -65,4 +65,14 @@ impl SQLRepo {
             _ => Err(anyhow::anyhow!("Multiple rows deleted")),
         }
     }
+
+    pub fn complete(&self, id: i64) -> Result<()> {
+        let sql = "UPDATE todos set completed = true where id = $1";
+        let query = sqlx::query(sql).bind(id).execute(&self.pool);
+        match self.rt.block_on(query)?.rows_affected() {
+            1 => Ok(()),
+            0 => Err(anyhow::anyhow!("No rows found")),
+            _ => Err(anyhow::anyhow!("Multiple rows updated"))
+        }
+    }
 }

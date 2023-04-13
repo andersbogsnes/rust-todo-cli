@@ -1,11 +1,10 @@
 use std::fs;
 
 use anyhow::{anyhow, Result};
-// TODO: delete items
-// TODO: mark complete
 use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
 
+use crate::models::tableize;
 use crate::repo::SQLRepo;
 
 mod models;
@@ -24,6 +23,7 @@ enum SubCommand {
     Get { id: i64 },
     List,
     Delete { id: i64 },
+    Complete { id: i64 },
 }
 
 fn init_db() -> Result<SQLRepo> {
@@ -39,29 +39,36 @@ fn init_db() -> Result<SQLRepo> {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     let args = Cli::parse();
     let repo = init_db()?;
+
     match args.command {
         SubCommand::Add { text: test } => {
             let new_item = repo.add(&test)?;
-            println!("Added item {:?}", new_item);
+            println!("Added item {}", new_item);
             Ok(())
         }
-        SubCommand::Get { id: item_id } => {
-            match repo.get(item_id)? {
-                Some(item) => println!("Item: {:?}", item),
+        SubCommand::Get { id } => {
+            match repo.get(id)? {
+                Some(item) => println!("Item: {}", item),
                 None => println!("No item found"),
             }
             Ok(())
         }
 
         SubCommand::List => {
-            repo.get_all().map(|item| println!("{:?}", item))?;
+            let items = repo.get_all()?;
+            println!("{}", tableize(items));
             Ok(())
         }
+
         SubCommand::Delete { id } => {
             repo.delete(id)?;
+            Ok(())
+        }
+        SubCommand::Complete { id } => {
+            repo.complete(id)?;
             Ok(())
         }
     }
